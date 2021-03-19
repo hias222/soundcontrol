@@ -1,5 +1,6 @@
 # first go
 
+see deej
 ## INIT
 
 go mod init example.com/user/hello
