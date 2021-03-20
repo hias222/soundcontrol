@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/hias222/soundcontrol/client/util"
 	"github.com/hias222/soundcontrol/client/webmodels"
 
 	"github.com/gorilla/websocket"
@@ -15,8 +16,98 @@ import (
 var done chan interface{}
 var interrupt chan os.Signal
 
+var (
+	gitCommit  string
+	versionTag string
+	buildType  string
+
+	verbose bool
+)
+
 type Soundcontrol struct {
-	socket *webmodels.MessageSocket
+	socket      *webmodels.MessageSocket
+	stopChannel chan bool
+}
+
+func NewSoundcontrol(verbose bool) (*Soundcontrol, error) {
+	newSocket, err := webmodels.NewWebsocket()
+
+	s := &Soundcontrol{
+		socket:      newSocket,
+		stopChannel: make(chan bool),
+	}
+
+	if err != nil {
+		log.Fatal("Error connecting to Websocket Server:", err)
+		// return nil, fmt.Errorf("create new SerialIO: %w", err)
+	}
+
+	return s, nil
+}
+
+func (s *Soundcontrol) Initialize() error {
+	log.Println("Initializing")
+
+	/*
+		// load the config for the first time
+		if err := d.config.Load(); err != nil {
+			d.logger.Errorw("Failed to load config during initialization", "error", err)
+			return fmt.Errorf("load config during init: %w", err)
+		}
+
+		// initialize the session map
+		if err := d.sessions.initialize(); err != nil {
+			d.logger.Errorw("Failed to initialize session map", "error", err)
+			return fmt.Errorf("init session map: %w", err)
+		}
+	*/
+
+	s.setupInterruptHandler()
+	s.run()
+
+	return nil
+}
+
+func (s *Soundcontrol) setupInterruptHandler() {
+	interruptChannel := util.SetupCloseHandler()
+
+	go func() {
+		signal := <-interruptChannel
+		log.Println("Interrupted", "signal", signal)
+		s.signalStop()
+	}()
+}
+
+func (s *Soundcontrol) run() {
+	log.Println("Run loop starting")
+
+	// connect to the arduino for the first time
+	go func() {
+		if err := s.socket.Start(); err != nil {
+			log.Fatal("Failed to start first-time socket connection", "error", err)
+
+		}
+	}()
+
+	// wait until stopped (gracefully)
+	<-s.stopChannel
+	log.Println("Stop channel signaled, terminating")
+
+	if err := s.stop(); err != nil {
+		log.Fatal("Failed to stop sound ", "error", err)
+		os.Exit(1)
+	} else {
+		// exit with 0
+		os.Exit(0)
+	}
+}
+
+func (s *Soundcontrol) stop() error {
+	log.Println("Stopping")
+
+	s.socket.Stop()
+
+	return nil
 }
 
 func receiveHandler(connection *websocket.Conn) {
@@ -31,26 +122,32 @@ func receiveHandler(connection *websocket.Conn) {
 	}
 }
 
+func (s *Soundcontrol) signalStop() {
+	log.Println("Signalling stop channel")
+	s.stopChannel <- true
+}
+
 func main() {
 	done = make(chan interface{})    // Channel to indicate that the receiverHandler is done
 	interrupt = make(chan os.Signal) // Channel to listen for interrupt signal to terminate gracefully
 
+	verbose = true
+
 	signal.Notify(interrupt, os.Interrupt) // Notify the interrupt channel for SIGINT
 
-	webmodels.AllUsers()
-
-	newSocket, err := webmodels.NewWebsocket()
-
-	sound := &Soundcontrol{
-		socket: newSocket,
-	}
+	// create the souncontrol instance
+	s, err := NewSoundcontrol(verbose)
 
 	if err != nil {
-		log.Fatal("Error connecting to Websocket Server:", err)
-		// return nil, fmt.Errorf("create new SerialIO: %w", err)
+		log.Fatal("Failed to create Sound Control object", "error", err)
 	}
 
-	log.Println(sound.socket)
+	log.Println(s)
+
+	// onwards, to glory
+	if err = s.Initialize(); err != nil {
+		log.Fatal("Failed to initialize sound ", "error", err)
+	}
 
 	socketUrl := "ws://localhost:8080" + "/ws"
 	conn, _, err := websocket.DefaultDialer.Dial(socketUrl, nil)

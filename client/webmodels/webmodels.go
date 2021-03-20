@@ -25,23 +25,32 @@ func NewWebsocket() (*MessageSocket, error) {
 	newSocket := &MessageSocket{
 		serverURL:   "ws://localhost:8080" + "/ws",
 		stopChannel: make(chan bool),
-		connected:   true,
+		connected:   false,
 	}
 
 	log.Println("Created socket instance")
 
-	newSocket.start()
-
 	return newSocket, nil
 }
 
-func (newSocket *MessageSocket) start() error {
+func (newSocket *MessageSocket) Start() error {
 
 	if newSocket.connected {
 		log.Println("Already connected, can't start another without closing first")
 		return errors.New("serial: connection already active")
 	}
 
+	log.Println("webmodel start ....")
+
 	return nil
 
+}
+
+func (newSocket *MessageSocket) Stop() {
+	if newSocket.connected {
+		log.Println("Shutting down socket connection")
+		newSocket.stopChannel <- true
+	} else {
+		log.Println("Not currently connected, nothing to stop")
+	}
 }
