@@ -7,11 +7,17 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/hias222/soundcontrol/client/webmodels"
+
 	"github.com/gorilla/websocket"
 )
 
 var done chan interface{}
 var interrupt chan os.Signal
+
+type Soundcontrol struct {
+	socket *webmodels.MessageSocket
+}
 
 func receiveHandler(connection *websocket.Conn) {
 	defer close(done)
@@ -30,6 +36,21 @@ func main() {
 	interrupt = make(chan os.Signal) // Channel to listen for interrupt signal to terminate gracefully
 
 	signal.Notify(interrupt, os.Interrupt) // Notify the interrupt channel for SIGINT
+
+	webmodels.AllUsers()
+
+	newSocket, err := webmodels.NewWebsocket()
+
+	sound := &Soundcontrol{
+		socket: newSocket,
+	}
+
+	if err != nil {
+		log.Fatal("Error connecting to Websocket Server:", err)
+		// return nil, fmt.Errorf("create new SerialIO: %w", err)
+	}
+
+	log.Println(sound.socket)
 
 	socketUrl := "ws://localhost:8080" + "/ws"
 	conn, _, err := websocket.DefaultDialer.Dial(socketUrl, nil)

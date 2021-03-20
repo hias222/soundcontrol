@@ -8,6 +8,9 @@
         },
         {
             "path": "../soundcontrol_bak/realtime-chat-go-react"
+        },
+        {
+            "path": "../soundcontrol_bak/deej"
         }
     ]
 }
