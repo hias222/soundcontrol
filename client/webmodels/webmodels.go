@@ -4,7 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"log"
+
+	"github.com/gorilla/websocket"
 )
+
+var done chan interface{}
 
 type MessageSocket struct {
 	serverURL string
@@ -33,12 +37,36 @@ func NewWebsocket() (*MessageSocket, error) {
 	return newSocket, nil
 }
 
+func (newSocket *MessageSocket) receiveHandler(connection *websocket.Conn) {
+	defer close(done)
+	for {
+		_, msg, err := connection.ReadMessage()
+		if err != nil {
+			log.Println("Error in receive:", err)
+			return
+		}
+		newSocket.testit(msg)
+	}
+}
+
+func (newSocket *MessageSocket) testit(msg []byte) {
+	log.Printf("For Max: %s\n", msg)
+}
+
 func (newSocket *MessageSocket) Start() error {
 
 	if newSocket.connected {
 		log.Println("Already connected, can't start another without closing first")
 		return errors.New("serial: connection already active")
 	}
+
+	conn, _, err := websocket.DefaultDialer.Dial(newSocket.serverURL, nil)
+	if err != nil {
+		log.Fatal("webodels: Error connecting to Websocket Server:", err)
+	}
+	//defer conn.Close()
+	newSocket.connected = true
+	go newSocket.receiveHandler(conn)
 
 	log.Println("webmodel start ....")
 
@@ -49,7 +77,7 @@ func (newSocket *MessageSocket) Start() error {
 func (newSocket *MessageSocket) Stop() {
 	if newSocket.connected {
 		log.Println("Shutting down socket connection")
-		newSocket.stopChannel <- true
+		//newSocket.stopChannel <- true
 	} else {
 		log.Println("Not currently connected, nothing to stop")
 	}
