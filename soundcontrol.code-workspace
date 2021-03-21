@@ -11,6 +11,9 @@
         },
         {
             "path": "../soundcontrol_bak/deej"
+        },
+        {
+            "path": "../soundclient"
         }
     ]
 }
