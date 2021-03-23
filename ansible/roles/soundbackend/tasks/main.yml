@@ -1,0 +1,93 @@
+- name: "soundbackend | set vars | global_clean_all {{global_clean_all}}"
+  set_fact:
+    key_value: serial_data
+    soundbackend_base_dir: /opt/soundbackend
+    soundbackend_repo: https://github.com/hias222/soundbackend.git
+
+- name: "soundbackend | install packages "
+  become: true
+  apt:
+    pkg:
+    - golang
+
+- name: soundbackend | Stop service cassandra
+  become: true
+  service:
+    name: cassandra
+    state: stopped
+  ignore_errors: true
+
+- name: soundbackend | Stop service colorado
+  become: true
+  service:
+    name: colorado
+    state: stopped
+  ignore_errors: true
+
+- name: soundbackend | Stop service soundbackend
+  become: true
+  service:
+    name: soundbackend
+    state: stopped
+  ignore_errors: true
+
+- name: "soundbackend | ufw allow http"
+  become: true
+  shell: 
+    cmd: ufw allow 8081
+
+- name: "soundbackend | remove dir {{soundbackend_base_dir}}"
+  become: true
+  file:
+    path: "{{ soundbackend_base_dir}}"
+    state: absent
+  when: global_clean_all|bool
+
+- name: "soundbackend | create dir {{ soundbackend_base_dir}}"
+  become: true
+  file:
+    path: "{{ soundbackend_base_dir}}"
+    owner: ubuntu
+    group: ubuntu
+    state: directory
+    mode: '0755'
+
+- name: "soundbackend | git checkout {{soundbackend_repo}}"
+  git:
+    repo: "{{soundbackend_repo}}"
+    dest: "{{ soundbackend_base_dir}}"
+    force: yes
+
+- name: "soundbackend | build "
+  become: false
+  ansible.builtin.shell: go install .
+  args:
+    chdir: "{{ soundbackend_base_dir}}"
+
+- name: "soundbackend | install service "
+  become: true
+  template:
+    src: soundbackend.service
+    dest: /lib/systemd/system/soundbackend.service
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: soundbackend | Enable service soundbackend
+  become: true
+  service:
+    name: soundbackend
+    enabled: yes
+
+- name: soundbackend | Enable service soundbackend
+  become: true
+  service:
+    name: soundbackend
+    state: started
+
+- name: soundbackend | cassandra | start service cassandra
+  become: true
+  service:
+    name: cassandra
+    state: started
+  ignore_errors: true

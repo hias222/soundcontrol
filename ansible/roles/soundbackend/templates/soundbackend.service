@@ -1,0 +1,15 @@
+[Unit]
+Description=soundbackend
+After=network.target
+
+[Service] 
+ExecStart=/home/ubuntu/go/bin/soundbackend
+WorkingDirectory=/home/ubuntu/go
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=soundbackend
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
