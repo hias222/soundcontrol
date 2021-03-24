@@ -9,7 +9,7 @@ let connect = (cb) => {
   }
   
   socket.onmessage = (msg) => {
-    console.log("Message from WebSocket: ", msg);
+   // console.log("Message from WebSocket: " + msg.data);
     cb(msg);
   }
 
@@ -23,7 +23,7 @@ let connect = (cb) => {
 };
 
 let sendMsg = (msg) => {
-  console.log("sending msg: ", msg);
+  //console.log("sending msg: ", msg);
   socket.send(msg);
 };
 
