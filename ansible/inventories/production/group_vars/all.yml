@@ -3,4 +3,5 @@ global_clean_all: false
 npm_gloabal_install: no
 install_gpio_libs: false
 use_ftdi_serial: true
+nginx_soundfrontend_dir: /usr/share/nginx/html/sound
 # install_user_os: ubuntu -- ansible_facts.user_id

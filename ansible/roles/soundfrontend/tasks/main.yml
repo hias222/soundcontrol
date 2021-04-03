@@ -1,0 +1,83 @@
+- name: "soundfrontend | set vars | global_clean_all {{global_clean_all}}"
+  set_fact:
+    key_value: soundfrontend
+    soundfrontend_base_dir: /opt/soundfrontend/base
+    soundfrontend_src_dir: /opt/soundfrontend/base/frontend
+    arm_architecture: true
+    soundfrontend_repo: https://github.com/hias222/soundcontrol.git
+
+- name: soundfrontend | Stop service cassandra
+  become: true
+  service:
+    name: cassandra
+    state: stopped
+  ignore_errors: true
+
+- name: "soundfrontend | pm2 stop all"
+  command: pm2 stop all
+  ignore_errors: true
+
+- name: "soundfrontend | remove dir {{soundfrontend_base_dir}}"
+  become: true
+  file:
+    path: "{{ soundfrontend_base_dir}}"
+    state: absent
+  when: global_clean_all|bool
+
+- name: "soundfrontend | create dir {{ soundfrontend_base_dir}}"
+  become: true
+  file:
+    path: "{{ soundfrontend_base_dir }}"
+    owner: ubuntu
+    group: ubuntu
+    state: directory
+    mode: "0755"
+
+- name: "soundfrontend | create dir {{ nginx_soundfrontend_dir}}"
+  become: true
+  file:
+    path: "{{ nginx_soundfrontend_dir}}"
+    owner: ubuntu
+    group: ubuntu
+    state: directory
+    mode: "0755"
+
+- name: "soundfrontend | git checkout {{soundfrontend_repo}}"
+  git:
+    repo: "{{soundfrontend_repo}}"
+    dest: "{{ soundfrontend_base_dir}}"
+    force: yes
+
+- name: "soundfrontend | Install {{ soundfrontend_src_dir}} packages"
+  npm:
+    path: "{{ soundfrontend_src_dir}}"
+    state: latest
+
+- name: "soundfrontend | env | copy environment to {{ soundfrontend_src_dir}}"
+  template:
+    src: .env
+    dest: "{{ soundfrontend_src_dir}}"
+
+- name: "soundfrontend | react npm build {{ soundfrontend_src_dir}}"
+  shell:
+    cmd: npm run build
+    chdir: "{{ soundfrontend_src_dir}}"
+
+- name: "soundfrontend | cp {{soundfrontend_src_dir}}/build/* to  {{nginx_soundfrontend_dir}}"
+  become: true
+  shell: cp -rf {{soundfrontend_src_dir}}/build/* {{nginx_soundfrontend_dir}}
+
+- name: "soundfrontend | pm2 start all"
+  command: pm2 start all
+  ignore_errors: true
+
+- name: "soundfrontend | pm2 save"
+  command: pm2 save
+  ignore_errors: true
+
+- name: soundfrontend | cassandra | start service cassandra
+  become: true
+  service:
+    name: cassandra
+    state: started
+  ignore_errors: true
