@@ -2,9 +2,8 @@
   set_fact:
     key_value: soundfrontend
     soundfrontend_base_dir: /opt/soundfrontend/base
-    soundfrontend_src_dir: /opt/soundfrontend/base/frontend
     arm_architecture: true
-    soundfrontend_repo: https://github.com/hias222/soundcontrol.git
+    soundfrontend_repo: https://github.com/hias222/soundfrontend.git
 
 - name: soundfrontend | Stop service cassandra
   become: true
@@ -48,24 +47,24 @@
     dest: "{{ soundfrontend_base_dir}}"
     force: yes
 
-- name: "soundfrontend | Install {{ soundfrontend_src_dir}} packages"
+- name: "soundfrontend | Install {{ soundfrontend_base_dir}} packages"
   npm:
-    path: "{{ soundfrontend_src_dir}}"
+    path: "{{ soundfrontend_base_dir}}"
     state: latest
 
-- name: "soundfrontend | env | copy environment to {{ soundfrontend_src_dir}}"
+- name: "soundfrontend | env | copy environment to {{ soundfrontend_base_dir}}"
   template:
     src: .env
-    dest: "{{ soundfrontend_src_dir}}"
+    dest: "{{ soundfrontend_base_dir}}"
 
-- name: "soundfrontend | react npm build {{ soundfrontend_src_dir}}"
+- name: "soundfrontend | react npm build {{ soundfrontend_base_dir}}"
   shell:
     cmd: npm run build
-    chdir: "{{ soundfrontend_src_dir}}"
+    chdir: "{{ soundfrontend_base_dir}}"
 
-- name: "soundfrontend | cp {{soundfrontend_src_dir}}/build/* to  {{nginx_soundfrontend_dir}}"
+- name: "soundfrontend | cp {{soundfrontend_base_dir}}/build/* to  {{nginx_soundfrontend_dir}}"
   become: true
-  shell: cp -rf {{soundfrontend_src_dir}}/build/* {{nginx_soundfrontend_dir}}
+  shell: cp -rf {{soundfrontend_base_dir}}/build/* {{nginx_soundfrontend_dir}}
 
 - name: "soundfrontend | pm2 start all"
   command: pm2 start all
